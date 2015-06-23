@@ -275,6 +275,11 @@ To change the prompt dynamically or just in specific buffers, use
   :type '(repeat string)
   :group 'circe)
 
+(defcustom circe-highlight-nick-in-server-messages-p t
+  "If non-nil, highlight nick in server messages as well."
+  :type 'boolean
+  :group 'circe)
+
 (defcustom circe-highlight-nick-type 'sender
   "How to highlight occurrences of our own nick.
 
@@ -1270,51 +1275,54 @@ This is used in `lui-pre-output-hook'."
   (goto-char (or (text-property-any (point-min) (point-max)
                                     'lui-format-argument 'body)
                  (point-min)))
-  (let* ((nick (circe-server-nick))
-         (nicks (append (and nick (list nick))
-                        circe-extra-nicks)))
-    (when nicks
-      ;; Can't use \<...\> because that won't match for \<forcer-\> We
-      ;; might eventually use \_< ... \_> if we define symbols to be
-      ;; nicks \\= is necessary, because it might be found right where we
-      ;; are, and that might not be the beginning of a line... (We start
-      ;; searching from the beginning of the body)
-      (let ((nick-regex (concat "\\(?:^\\|\\W\\|\\=\\)"
-                                "\\(" (regexp-opt nicks) "\\)"
-                                "\\(?:$\\|\\W\\)")))
-        (cond
-         ((eq circe-highlight-nick-type 'sender)
-          (if (text-property-any (point-min)
-                                 (point-max)
-                                 'face 'circe-originator-face)
-              (when (re-search-forward nick-regex nil t)
-                (circe--highlight-extend-properties
-                 (point-min) (point-max)
-                 'face 'circe-originator-face
-                 '(face circe-highlight-nick-face)))
-            (let ((circe-highlight-nick-type 'occurrence))
-              (circe--output-highlight-nick))))
-         ((eq circe-highlight-nick-type 'occurrence)
-          (while (re-search-forward nick-regex nil t)
-            (add-text-properties (match-beginning 1)
-                                 (match-end 1)
-                                 '(face circe-highlight-nick-face))))
-         ((eq circe-highlight-nick-type 'message)
-          (when (re-search-forward nick-regex nil t)
-            (let* ((start (text-property-any (point-min)
-                                             (point-max)
-                                             'lui-format-argument 'body))
-                   (end (when start
-                          (next-single-property-change start
-                                                       'lui-format-argument))))
-              (when (and start end)
-                (add-text-properties start end
-                                     '(face circe-highlight-nick-face))))))
-         ((eq circe-highlight-nick-type 'all)
-          (when (re-search-forward nick-regex nil t)
-            (add-text-properties (point-min)
-                                 (point-max)
-                                 '(face circe-highlight-nick-face)))))))))
+  (when (or circe-highlight-nick-in-server-messages-p
+            (not (equal (get-text-property (point) 'face)
+                        '(circe-server-face))))
+    (let* ((nick (circe-server-nick))
+           (nicks (append (and nick (list nick))
+                          circe-extra-nicks)))
+      (when nicks
+        ;; Can't use \<...\> because that won't match for \<forcer-\>
+        ;; We might eventually use \_< ... \_> if we define symbols to
+        ;; be nicks \\= is necessary, because it might be found right
+        ;; where we are, and that might not be the beginning of a
+        ;; line... (We start searching from the beginning of the body)
+        (let ((nick-regex (concat "\\(?:^\\|\\W\\|\\=\\)"
+                                  "\\(" (regexp-opt nicks) "\\)"
+                                  "\\(?:$\\|\\W\\)")))
+          (cond
+           ((eq circe-highlight-nick-type 'sender)
+            (if (text-property-any (point-min)
+                                   (point-max)
+                                   'face 'circe-originator-face)
+                (when (re-search-forward nick-regex nil t)
+                  (circe--highlight-extend-properties
+                   (point-min) (point-max)
+                   'face 'circe-originator-face
+                   '(face circe-highlight-nick-face)))
+              (let ((circe-highlight-nick-type 'occurrence))
+                (circe--output-highlight-nick))))
+           ((eq circe-highlight-nick-type 'occurrence)
+            (while (re-search-forward nick-regex nil t)
+              (add-text-properties (match-beginning 1)
+                                   (match-end 1)
+                                   '(face circe-highlight-nick-face))))
+           ((eq circe-highlight-nick-type 'message)
+            (when (re-search-forward nick-regex nil t)
+              (let* ((start (text-property-any (point-min)
+                                               (point-max)
+                                               'lui-format-argument 'body))
+                     (end (when start
+                            (next-single-property-change start
+                                                         'lui-format-argument))))
+                (when (and start end)
+                  (add-text-properties start end
+                                       '(face circe-highlight-nick-face))))))
+           ((eq circe-highlight-nick-type 'all)
+            (when (re-search-forward nick-regex nil t)
+              (add-text-properties (point-min)
+                                   (point-max)
+                                   '(face circe-highlight-nick-face))))))))))
 
 (defun circe--highlight-extend-properties (from to prop val properties)
   "Extend property values.
