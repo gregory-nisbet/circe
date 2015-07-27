@@ -106,7 +106,7 @@ See `circe-fool-list'."
 ;;;; Variables ;;;;
 ;;;;;;;;;;;;;;;;;;;
 
-(defcustom circe-default-nick (user-login-name)
+(defcustom circe-default-nick ""
   "The default nick for circe."
   :type 'string
   :group 'circe)
@@ -116,9 +116,7 @@ See `circe-fool-list'."
   :type 'string
   :group 'circe)
 
-(defcustom circe-default-realname (if (string= (user-full-name) "")
-                                      circe-default-nick
-                                    (user-full-name))
+(defcustom circe-default-realname ""
   "The default real name for circe."
   :type 'string
   :group 'circe)
